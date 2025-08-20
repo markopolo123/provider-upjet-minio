@@ -1,0 +1,189 @@
+# Complete E2E test manifest demonstrating all 10 Minio resources
+# This file shows proper resource dependencies and ordering
+---
+# 1. First: Create S3 Bucket (foundation resource)
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: Bucket
+metadata:
+  name: test-crossplane-bucket
+  labels:
+    testing.upbound.io/example-name: e2e-test-bucket
+spec:
+  forProvider:
+    bucket: test-crossplane-bucket
+    acl: private
+    forceDestroy: true
+  providerConfigRef:
+    name: default
+---
+# 2. Create IAM User (independent resource)
+apiVersion: iam.minio.crossplane.io/v1alpha1
+kind: User
+metadata:
+  name: test-crossplane-user
+  labels:
+    testing.upbound.io/example-name: e2e-test-user
+spec:
+  forProvider:
+    name: test-crossplane-user
+    forceDestroy: true
+  providerConfigRef:
+    name: default
+---
+# 3. Create IAM Policy (independent resource)
+apiVersion: iam.minio.crossplane.io/v1alpha1
+kind: Policy
+metadata:
+  name: test-crossplane-policy
+  labels:
+    testing.upbound.io/example-name: e2e-test-policy
+spec:
+  forProvider:
+    name: test-crossplane-policy
+    policy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "s3:GetObject",
+              "s3:PutObject",
+              "s3:ListBucket"
+            ],
+            "Resource": [
+              "arn:aws:s3:::test-crossplane-bucket",
+              "arn:aws:s3:::test-crossplane-bucket/*"
+            ]
+          }
+        ]
+      }
+  providerConfigRef:
+    name: default
+---
+# 4. Create Bucket Policy (depends on bucket)
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: BucketPolicy
+metadata:
+  name: test-crossplane-bucket-policy
+  labels:
+    testing.upbound.io/example-name: e2e-test-bucket-policy
+spec:
+  forProvider:
+    bucket: test-crossplane-bucket
+    policy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": ["s3:GetObject"],
+            "Resource": ["arn:aws:s3:::test-crossplane-bucket/*"]
+          }
+        ]
+      }
+  providerConfigRef:
+    name: default
+---
+# 5. Finally: Create S3 Object (depends on bucket)
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: test-crossplane-object
+  labels:
+    testing.upbound.io/example-name: e2e-test-object
+spec:
+  forProvider:
+    bucketName: test-crossplane-bucket
+    objectName: e2e-test-file.txt
+    content: "Hello from Crossplane Minio Provider E2E Test!"
+    contentType: text/plain
+  providerConfigRef:
+    name: default
+---
+# 6. Create IAM Group (independent resource)
+apiVersion: iam.minio.crossplane.io/v1alpha1
+kind: Group
+metadata:
+  name: test-crossplane-group
+  labels:
+    testing.upbound.io/example-name: e2e-test-group
+spec:
+  forProvider:
+    name: test-crossplane-group
+    forceDestroy: true
+  providerConfigRef:
+    name: default
+---
+# 7. Create Service Account (depends on user)
+apiVersion: iam.minio.crossplane.io/v1alpha1
+kind: ServiceAccount
+metadata:
+  name: test-crossplane-service-account
+  labels:
+    testing.upbound.io/example-name: e2e-test-service-account
+spec:
+  forProvider:
+    targetUser: test-crossplane-user
+    description: "Service account for E2E testing"
+    policy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": ["s3:GetObject", "s3:PutObject"],
+            "Resource": ["arn:aws:s3:::test-crossplane-bucket/*"]
+          }
+        ]
+      }
+  providerConfigRef:
+    name: default
+---
+# 8. Create Bucket Versioning (depends on bucket)
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: BucketVersioning
+metadata:
+  name: test-crossplane-bucket-versioning
+  labels:
+    testing.upbound.io/example-name: e2e-test-bucket-versioning
+spec:
+  forProvider:
+    bucket: test-crossplane-bucket
+    versioningConfiguration:
+    - status: "Enabled"
+      excludeFolders: false
+  providerConfigRef:
+    name: default
+---
+# 9. Create Bucket Notification (depends on bucket)
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: BucketNotification
+metadata:
+  name: test-crossplane-bucket-notification
+  labels:
+    testing.upbound.io/example-name: e2e-test-bucket-notification
+spec:
+  forProvider:
+    bucket: test-crossplane-bucket
+    queue:
+    - queueArn: "arn:minio:sqs::test-queue:webhook"
+      events: 
+      - "s3:ObjectCreated:*"
+      filterPrefix: "uploads/"
+  providerConfigRef:
+    name: default
+---
+# 10. Create KMS Key (independent resource)
+apiVersion: kms.minio.crossplane.io/v1alpha1
+kind: Key
+metadata:
+  name: test-crossplane-kms-key
+  labels:
+    testing.upbound.io/example-name: e2e-test-kms-key
+spec:
+  forProvider:
+    keyId: test-encryption-key
+  providerConfigRef:
+    name: default

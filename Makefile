@@ -1,8 +1,8 @@
 # ====================================================================================
 # Setup Project
 
-PROJECT_NAME ?= upjet-provider-template
-PROJECT_REPO ?= github.com/upbound/$(PROJECT_NAME)
+PROJECT_NAME ?= provider-minio  
+PROJECT_REPO ?= github.com/markopolo123/provider-upjet-minio
 
 export TERRAFORM_VERSION ?= 1.5.7
 
@@ -10,12 +10,12 @@ export TERRAFORM_VERSION ?= 1.5.7
 # licensed under BSL, which is not permitted.
 TERRAFORM_VERSION_VALID := $(shell [ "$(TERRAFORM_VERSION)" = "`printf "$(TERRAFORM_VERSION)\n1.6" | sort -V | head -n1`" ] && echo 1 || echo 0)
 
-export TERRAFORM_PROVIDER_SOURCE ?= hashicorp/null
-export TERRAFORM_PROVIDER_REPO ?= https://github.com/hashicorp/terraform-provider-null
-export TERRAFORM_PROVIDER_VERSION ?= 3.2.2
-export TERRAFORM_PROVIDER_DOWNLOAD_NAME ?= terraform-provider-null
-export TERRAFORM_PROVIDER_DOWNLOAD_URL_PREFIX ?= https://releases.hashicorp.com/$(TERRAFORM_PROVIDER_DOWNLOAD_NAME)/$(TERRAFORM_PROVIDER_VERSION)
-export TERRAFORM_NATIVE_PROVIDER_BINARY ?= terraform-provider-null_v3.1.0_x5
+export TERRAFORM_PROVIDER_SOURCE ?= aminueza/minio
+export TERRAFORM_PROVIDER_REPO ?= https://github.com/aminueza/terraform-provider-minio
+export TERRAFORM_PROVIDER_VERSION ?= 3.6.3
+export TERRAFORM_PROVIDER_DOWNLOAD_NAME ?= terraform-provider-minio
+export TERRAFORM_PROVIDER_DOWNLOAD_URL_PREFIX ?= https://github.com/aminueza/terraform-provider-minio/releases/download/v$(TERRAFORM_PROVIDER_VERSION)
+export TERRAFORM_NATIVE_PROVIDER_BINARY ?= terraform-provider-minio_v3.6.3_x5
 export TERRAFORM_DOCS_PATH ?= docs/resources
 
 
@@ -93,7 +93,7 @@ fallthrough: submodules
 
 # NOTE(hasheddan): we force image building to happen prior to xpkg build so that
 # we ensure image is present in daemon.
-xpkg.build.upjet-provider-template: do.build.images
+xpkg.build.provider-minio: do.build.images
 
 # NOTE(hasheddan): we ensure up is installed prior to running platform-specific
 # build steps in parallel to avoid encountering an installation race condition.
@@ -244,6 +244,14 @@ Crossplane Targets:
     submodules            Update the submodules, such as the common build scripts.
     run                   Run crossplane locally, out-of-cluster. Useful for development.
 
+Minio E2E Testing Targets:
+    bootstrap-minio       Bootstrap Kind cluster with Crossplane + Minio for testing.
+    cleanup-minio         Clean up Kind cluster and Minio resources.
+    e2e-minio            Run e2e tests with locally deployed Minio (requires bootstrap-minio first).
+    e2e-minio-comprehensive  Run comprehensive e2e test with all resources in one manifest.
+    full-e2e-minio       Complete workflow: bootstrap -> deploy -> test -> cleanup.
+    e2e-minio-external   Run e2e tests with external Minio (requires UPTEST_CLOUD_CREDENTIALS).
+
 endef
 # The reason CROSSPLANE_MAKE_HELP is used instead of CROSSPLANE_HELP is because the crossplane
 # binary will try to use CROSSPLANE_HELP if it is set, and this is for something different.
@@ -255,6 +263,49 @@ crossplane.help:
 help-special: crossplane.help
 
 .PHONY: crossplane.help help-special
+
+# ====================================================================================
+# Minio-specific test targets
+
+# Bootstrap Kind cluster with Minio for local development and testing
+bootstrap-minio: 
+	@$(INFO) bootstrapping Kind cluster with Minio
+	@./cluster/test/bootstrap-kind.sh
+	@$(OK) Kind cluster with Minio ready
+
+# Clean up Kind cluster and resources
+cleanup-minio:
+	@$(INFO) cleaning up Kind cluster and Minio resources
+	@./cluster/test/cleanup.sh
+	@$(OK) cleanup complete
+
+# Run e2e tests with locally deployed Minio
+e2e-minio: local-deploy
+	@$(INFO) running e2e tests with Minio
+	@UPTEST_EXAMPLE_LIST="examples/s3/bucket/bucket.yaml,examples/iam/user/user.yaml,examples/iam/policy/policy.yaml,examples/s3/bucketpolicy/bucketpolicy.yaml,examples/s3/object/object.yaml" $(UPTEST) e2e --setup-script=cluster/test/setup.sh --default-conditions="Ready,Synced" || $(FAIL)
+	@$(OK) e2e tests with Minio completed
+
+# Run comprehensive e2e tests using all-in-one manifest
+e2e-minio-comprehensive: local-deploy
+	@$(INFO) running comprehensive e2e test with all resources
+	@UPTEST_EXAMPLE_LIST="examples/e2e-test-suite.yaml" $(UPTEST) e2e --setup-script=cluster/test/setup.sh --default-conditions="Ready,Synced" || $(FAIL)
+	@$(OK) comprehensive e2e test completed
+
+# Full end-to-end workflow: bootstrap -> deploy -> test -> cleanup
+full-e2e-minio: bootstrap-minio e2e-minio cleanup-minio
+
+# Test with external Minio server (requires UPTEST_CLOUD_CREDENTIALS)
+e2e-minio-external: local-deploy
+	@$(INFO) running e2e tests with external Minio server
+	@if [ -z "$$UPTEST_CLOUD_CREDENTIALS" ]; then \
+		echo "Error: UPTEST_CLOUD_CREDENTIALS required for external Minio testing"; \
+		echo "Example: UPTEST_CLOUD_CREDENTIALS='{\"minio_server\":\"http://localhost:9000\",\"minio_user\":\"minioadmin\",\"minio_password\":\"minioadmin\",\"minio_region\":\"us-east-1\"}' make e2e-minio-external"; \
+		exit 1; \
+	fi
+	@UPTEST_EXAMPLE_LIST="examples/s3/bucket/bucket.yaml,examples/iam/user/user.yaml,examples/iam/policy/policy.yaml,examples/s3/bucketpolicy/bucketpolicy.yaml,examples/s3/object/object.yaml" $(UPTEST) e2e --setup-script=cluster/test/setup.sh --default-conditions="Ready,Synced" || $(FAIL)
+	@$(OK) e2e tests with external Minio completed
+
+.PHONY: bootstrap-minio cleanup-minio e2e-minio e2e-minio-comprehensive full-e2e-minio e2e-minio-external
 
 # TODO(negz): Update CI to use these targets.
 vendor: modules.download

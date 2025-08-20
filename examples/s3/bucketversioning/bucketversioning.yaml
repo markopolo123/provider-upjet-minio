@@ -1,0 +1,13 @@
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: BucketVersioning
+metadata:
+  name: example-bucket-versioning
+  annotations:
+    crossplane.io/external-name: example-bucket
+spec:
+  forProvider:
+    versioningConfiguration:
+    - status: "Enabled"
+      excludeFolders: false
+  providerConfigRef:
+    name: default

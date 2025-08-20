@@ -1,0 +1,11 @@
+apiVersion: iam.minio.crossplane.io/v1alpha1
+kind: Group
+metadata:
+  name: example-group
+  annotations:
+    crossplane.io/external-name: developers
+spec:
+  forProvider:
+    forceDestroy: true
+  providerConfigRef:
+    name: default

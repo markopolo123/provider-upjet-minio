@@ -1,0 +1,64 @@
+# Test manifest for the 5 new resources
+---
+# 1. IAM Group (independent)
+apiVersion: iam.minio.crossplane.io/v1alpha1
+kind: Group
+metadata:
+  name: test-new-group
+spec:
+  forProvider:
+    forceDestroy: true
+  providerConfigRef:
+    name: default
+---
+# 2. KMS Key (independent)  
+apiVersion: kms.minio.crossplane.io/v1alpha1
+kind: Key
+metadata:
+  name: test-new-kms-key
+spec:
+  forProvider: {}
+  providerConfigRef:
+    name: default
+---
+# 3. Service Account (requires existing user)
+apiVersion: iam.minio.crossplane.io/v1alpha1
+kind: ServiceAccount
+metadata:
+  name: test-new-service-account
+spec:
+  forProvider:
+    targetUser: example-user
+    description: "Test service account"
+  providerConfigRef:
+    name: default
+---
+# 4. Bucket Versioning (requires existing bucket)
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: BucketVersioning
+metadata:
+  name: test-new-bucket-versioning
+  annotations:
+    crossplane.io/external-name: example-crossplane-bucket
+spec:
+  forProvider:
+    versioningConfiguration:
+    - status: "Enabled"
+  providerConfigRef:
+    name: default
+---
+# 5. Bucket Notification (requires existing bucket)
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: BucketNotification
+metadata:
+  name: test-new-bucket-notification
+  annotations:
+    crossplane.io/external-name: example-crossplane-bucket
+spec:
+  forProvider:
+    queue:
+    - queueArn: "arn:minio:sqs::test-webhook:webhook"
+      events: 
+      - "s3:ObjectCreated:*"
+  providerConfigRef:
+    name: default

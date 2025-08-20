@@ -1,0 +1,10 @@
+apiVersion: kms.minio.crossplane.io/v1alpha1
+kind: Key
+metadata:
+  name: example-kms-key
+  annotations:
+    crossplane.io/external-name: example-encryption-key
+spec:
+  forProvider: {}
+  providerConfigRef:
+    name: default

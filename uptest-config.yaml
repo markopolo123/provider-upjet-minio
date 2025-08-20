@@ -1,0 +1,76 @@
+apiVersion: uptest.upbound.io/v1beta1
+kind: TestSuite
+metadata:
+  name: provider-minio-test-suite
+spec:
+  # Maximum time to wait for a test to complete
+  timeout: 1800s
+  # Maximum time to wait for a resource to become ready
+  readyTimeout: 900s
+  # Maximum time to wait for a resource to be deleted
+  deleteTimeout: 900s
+  # Skip resource deletion after test completion (useful for debugging)
+  skipDelete: false
+  # Directory containing test manifests
+  testDir: examples
+  # Setup script to run before tests
+  setupScript: cluster/test/setup.sh
+  # Teardown script to run after tests
+  teardownScript: cluster/test/cleanup.sh
+  # Default conditions to wait for
+  defaultConditions:
+    - Ready
+    - Synced
+  # Tests to run - ordered by dependencies
+  tests:
+    # First: Create bucket (no dependencies)
+    - name: s3-bucket
+      manifest: examples/s3/bucket/bucket.yaml
+      timeout: 900s
+      conditions:
+        - Ready
+        - Synced
+    
+    # Second: Create IAM user (no dependencies)  
+    - name: iam-user
+      manifest: examples/iam/user/user.yaml
+      timeout: 900s
+      conditions:
+        - Ready
+        - Synced
+        
+    # Third: Create IAM policy (no dependencies)
+    - name: iam-policy
+      manifest: examples/iam/policy/policy.yaml
+      timeout: 900s
+      conditions:
+        - Ready
+        - Synced
+        
+    # Fourth: Create bucket policy (depends on bucket)
+    - name: s3-bucket-policy
+      manifest: examples/s3/bucketpolicy/bucketpolicy.yaml
+      timeout: 900s
+      conditions:
+        - Ready
+        - Synced
+      depends:
+        - s3-bucket
+        
+    # Fifth: Create S3 object (depends on bucket)
+    - name: s3-object
+      manifest: examples/s3/object/object.yaml
+      timeout: 900s
+      conditions:
+        - Ready
+        - Synced
+      depends:
+        - s3-bucket
+        
+  # Resource cleanup order (most dependent first)
+  cleanup:
+    - s3-object
+    - s3-bucket-policy  
+    - iam-policy
+    - iam-user
+    - s3-bucket

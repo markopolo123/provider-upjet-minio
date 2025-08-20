@@ -1,0 +1,28 @@
+apiVersion: iam.minio.crossplane.io/v1alpha1
+kind: Policy
+metadata:
+  annotations:
+    meta.upbound.io/example-id: iam/v1alpha1/policy
+  labels:
+    testing.upbound.io/example-name: example-policy
+  name: example-policy
+spec:
+  forProvider:
+    policy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "s3:GetObject",
+              "s3:PutObject"
+            ],
+            "Resource": [
+              "arn:aws:s3:::example-crossplane-bucket/*"
+            ]
+          }
+        ]
+      }
+  providerConfigRef:
+    name: default

@@ -1,0 +1,16 @@
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: BucketNotification
+metadata:
+  name: example-bucket-notification
+  annotations:
+    crossplane.io/external-name: example-bucket
+spec:
+  forProvider:
+    queue:
+    - queueArn: "arn:minio:sqs::example-queue:webhook"
+      events: 
+      - "s3:ObjectCreated:*"
+      filterPrefix: "uploads/"
+      filterSuffix: ".jpg"
+  providerConfigRef:
+    name: default

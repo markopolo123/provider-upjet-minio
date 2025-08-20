@@ -1,0 +1,16 @@
+apiVersion: s3.minio.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  annotations:
+    meta.upbound.io/example-id: s3/v1alpha1/object
+    crossplane.io/external-name: example-file.txt
+  labels:
+    testing.upbound.io/example-name: example-object
+  name: example-object
+spec:
+  forProvider:
+    bucketName: example-crossplane-bucket
+    content: "Hello from Crossplane Minio Provider!"
+    contentType: text/plain
+  providerConfigRef:
+    name: default

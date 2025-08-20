@@ -1,0 +1,7 @@
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-minio
+spec:
+  package: build-9d5742f8/provider-minio-arm64@sha256:560de7293fd5128e363b46b2ece4dcf533aea3b4fc012a60b4b71f7321bc2cc3
+  packagePullPolicy: Never

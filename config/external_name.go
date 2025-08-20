@@ -9,8 +9,21 @@ import "github.com/crossplane/upjet/pkg/config"
 // ExternalNameConfigs contains all external name configurations for this
 // provider.
 var ExternalNameConfigs = map[string]config.ExternalName{
-	// Import requires using a randomly generated ID from provider: nl-2e21sda
-	"null_resource": config.IdentifierFromProvider,
+	// S3 Resources - bucket uses "bucket" field, not "name"
+	"minio_s3_bucket":              config.IdentifierFromProvider,
+	"minio_s3_bucket_policy":       config.TemplatedStringAsIdentifier("bucket", "{{ .external_name }}"),
+	"minio_s3_object":              config.TemplatedStringAsIdentifier("object_name", "{{ .external_name }}"),
+	
+	// IAM Resources - these use "name" field correctly
+	"minio_iam_user":               config.NameAsIdentifier,
+	"minio_iam_policy":             config.NameAsIdentifier,
+	
+	// Next 5 resources
+	"minio_iam_group":              config.NameAsIdentifier,  // uses "name" field
+	"minio_s3_bucket_versioning":   config.TemplatedStringAsIdentifier("bucket", "{{ .external_name }}"),  // uses "bucket" field
+	"minio_s3_bucket_notification": config.TemplatedStringAsIdentifier("bucket", "{{ .external_name }}"),  // uses "bucket" field  
+	"minio_kms_key":                config.TemplatedStringAsIdentifier("key_id", "{{ .external_name }}"),  // uses "key_id" field
+	"minio_iam_service_account":    config.IdentifierFromProvider,  // uses computed "access_key" field
 }
 
 // ExternalNameConfigurations applies all external name configs listed in the

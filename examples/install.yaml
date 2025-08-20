@@ -1,6 +1,7 @@
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
-  name: upjet-provider-template
+  name: provider-minio
 spec:
-  package: xpkg.crossplane.io/upbound/upjet-provider-template:v0.1.0
+  package: build-9d5742f8/provider-minio-arm64:latest
+  packagePullPolicy: Never

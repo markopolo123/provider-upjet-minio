@@ -1,4 +1,4 @@
-module github.com/upbound/upjet-provider-template
+module github.com/markopolo123/provider-upjet-minio
 
 go 1.21
 
@@ -127,3 +127,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+replace github.com/markopolo123/provider-upjet-minio => ./

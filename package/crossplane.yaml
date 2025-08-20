@@ -1,4 +1,35 @@
 apiVersion: meta.pkg.crossplane.io/v1
 kind: Provider
 metadata:
-  name: upjet-provider-template
+  name: provider-minio
+  annotations:
+    # Crossplane v2.0 compatible
+    meta.crossplane.io/maintainer: "markopolo123"
+    meta.crossplane.io/source: "github.com/markopolo123/provider-upjet-minio"
+    meta.crossplane.io/license: "Apache-2.0"
+    meta.crossplane.io/description: "Crossplane provider for MinIO S3-compatible object storage"
+    meta.crossplane.io/readme: |
+      # Provider MinIO
+      
+      A Crossplane provider for MinIO built using Upjet code generation tools.
+      
+      ## Features
+      - 10 MinIO Resources (S3, IAM, KMS)
+      - S3-compatible object storage management
+      - IAM users, groups, policies, and service accounts
+      - KMS encryption key management
+      - Cross-resource references and dependency resolution
+      - Compatible with Crossplane v1.14+ and v2.0
+      
+      ## Installation
+      ```bash
+      kubectl crossplane install provider xpkg.upbound.io/markopolo123/provider-minio:v0.2.0
+      ```
+      
+      ## Quick Start
+      See README.md for complete documentation and examples.
+    meta.crossplane.io/keywords: "minio,s3,object-storage,iam,kms,storage,upjet"
+    meta.crossplane.io/category: "Storage"
+spec:
+  crossplane:
+    version: ">=v1.14.0"
