@@ -1,0 +1,103 @@
+# Test cases for SSL ingress configurations
+# This file demonstrates different ways to configure MinIO provider with SSL
+
+# Test 1: Internal cluster service (HTTP) - Working configuration from the issue
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: internal-http-secret
+  namespace: upbound-system
+type: Opaque
+stringData:
+  credentials: |
+    {
+      "minio_server": "minio.minio.svc.cluster.local",
+      "minio_user": "nD7ZvisTTCycJ7sTGONv",
+      "minio_password": "CN1UrLTLsRaQwfK6HkzHYTIFFQfq8ffzsW82F86D",
+      "minio_region": "us-east-1",
+      "minio_ssl": "false"
+    }
+---
+apiVersion: minio.crossplane.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: internal-http-config
+  annotations:
+    crossplane.io/example: "true"
+    description: "Working configuration using internal cluster service"
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      name: internal-http-secret
+      namespace: upbound-system
+      key: credentials
+
+# Test 2: HTTPS ingress without protocol prefix - Fixed configuration
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: https-ingress-secret
+  namespace: upbound-system
+type: Opaque
+stringData:
+  credentials: |
+    {
+      "minio_server": "minio-api.taile7a886.ts.net:443",
+      "minio_user": "nD7ZvisTTCycJ7sTGONv",
+      "minio_password": "CN1UrLTLsRaQwfK6HkzHYTIFFQfq8ffzsW82F86D",
+      "minio_region": "us-east-1",
+      "minio_ssl": "true",
+      "minio_insecure": "false"
+    }
+---
+apiVersion: minio.crossplane.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: https-ingress-config
+  annotations:
+    crossplane.io/example: "true"
+    description: "HTTPS ingress configuration with proper SSL settings"
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      name: https-ingress-secret
+      namespace: upbound-system
+      key: credentials
+
+# Test 3: HTTPS with default port
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: https-default-port-secret
+  namespace: upbound-system
+type: Opaque
+stringData:
+  credentials: |
+    {
+      "minio_server": "minio-api.taile7a886.ts.net",
+      "minio_user": "nD7ZvisTTCycJ7sTGONv",
+      "minio_password": "CN1UrLTLsRaQwfK6HkzHYTIFFQfq8ffzsW82F86D",
+      "minio_region": "us-east-1",
+      "minio_ssl": "true",
+      "minio_insecure": "false"
+    }
+---
+apiVersion: minio.crossplane.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: https-default-port-config
+  annotations:
+    crossplane.io/example: "true"
+    description: "HTTPS configuration without explicit port (defaults to 443)"
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      name: https-default-port-secret
+      namespace: upbound-system
+      key: credentials

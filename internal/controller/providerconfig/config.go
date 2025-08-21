@@ -2,10 +2,13 @@ package providerconfig
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
@@ -26,22 +29,72 @@ const (
 	errValidateCredentials = "cannot validate credentials"
 )
 
+// buildMinioURL constructs the proper MinIO URL based on server and SSL settings
+func buildMinioURL(server string, useSSL bool) (string, error) {
+	// If server already has a protocol, return an error as per MinIO provider expectations
+	if strings.HasPrefix(server, "http://") || strings.HasPrefix(server, "https://") {
+		return "", fmt.Errorf("minio_server should not include protocol prefix (http:// or https://), got: %s", server)
+	}
+
+	// Construct URL with appropriate protocol
+	protocol := "http"
+	if useSSL {
+		protocol = "https"
+	}
+
+	return fmt.Sprintf("%s://%s", protocol, server), nil
+}
+
 // validateMinioCredentials validates Minio credentials by making a test API call
-func validateMinioCredentials(ctx context.Context, server, user, password string) error {
-	// Create a minimal HTTP client with timeout
+func validateMinioCredentials(ctx context.Context, creds map[string]string) error {
+	server := creds["minio_server"]
+	
+	// Parse SSL setting (default to false if not provided)
+	useSSL := false
+	if sslStr := creds["minio_ssl"]; sslStr != "" {
+		var err error
+		useSSL, err = strconv.ParseBool(sslStr)
+		if err != nil {
+			return fmt.Errorf("invalid minio_ssl value '%s': %w", sslStr, err)
+		}
+	}
+
+	// Parse insecure setting for SSL (default to false if not provided)
+	insecure := false
+	if insecureStr := creds["minio_insecure"]; insecureStr != "" {
+		var err error
+		insecure, err = strconv.ParseBool(insecureStr)
+		if err != nil {
+			return fmt.Errorf("invalid minio_insecure value '%s': %w", insecureStr, err)
+		}
+	}
+
+	// Build the proper URL
+	url, err := buildMinioURL(server, useSSL)
+	if err != nil {
+		return err
+	}
+
+	// Create HTTP client with SSL configuration
+	transport := &http.Transport{}
+	if useSSL && insecure {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
+		Transport: transport,
 	}
 
 	// Make a test request to the Minio API
-	req, err := http.NewRequestWithContext(ctx, "GET", server+"/", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url+"/", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to connect to Minio server: %w", err)
+		return fmt.Errorf("failed to connect to Minio server at %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
@@ -102,7 +155,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, errors.Wrap(r.client.Status().Update(ctx, pc), "cannot update status")
 	}
 
-	if err := validateMinioCredentials(ctx, server, user, password); err != nil {
+	if err := validateMinioCredentials(ctx, creds); err != nil {
 		log.Debug(errValidateCredentials, "error", err)
 		pc.Status.SetConditions(xpv1.Unavailable().WithMessage(err.Error()))
 		return ctrl.Result{}, errors.Wrap(r.client.Status().Update(ctx, pc), "cannot update status")

@@ -1,0 +1,30 @@
+apiVersion: minio.crossplane.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: https-config
+  annotations:
+    crossplane.io/example: "true"
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      name: provider-secret-https
+      namespace: upbound-system
+      key: credentials
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: provider-secret-https
+  namespace: upbound-system
+type: Opaque
+stringData:
+  credentials: |
+    {
+      "minio_server": "minio-api.example.com:443",
+      "minio_user": "your-access-key",
+      "minio_password": "your-secret-key",
+      "minio_region": "us-east-1",
+      "minio_ssl": "true",
+      "minio_insecure": "false"
+    }

@@ -12,6 +12,8 @@ MINIO_SERVER=${MINIO_SERVER:-"minio-api.minio-system.svc.cluster.local:9000"}
 MINIO_USER=${MINIO_USER:-"testuser"}
 MINIO_PASSWORD=${MINIO_PASSWORD:-"testpassword123"}
 MINIO_REGION=${MINIO_REGION:-"us-east-1"}
+MINIO_SSL=${MINIO_SSL:-"false"}
+MINIO_INSECURE=${MINIO_INSECURE:-"false"}
 
 # Use provided cloud credentials or create default Minio credentials
 if [ -n "${UPTEST_CLOUD_CREDENTIALS:-}" ]; then
@@ -19,12 +21,17 @@ if [ -n "${UPTEST_CLOUD_CREDENTIALS:-}" ]; then
     ${KUBECTL} -n upbound-system create secret generic provider-secret --from-literal=credentials="${UPTEST_CLOUD_CREDENTIALS}" --dry-run=client -o yaml | ${KUBECTL} apply -f -
 else
     echo "Creating default Minio credentials for local testing..."
+    echo "  Server: ${MINIO_SERVER}"
+    echo "  SSL: ${MINIO_SSL}"
+    echo "  Insecure: ${MINIO_INSECURE}"
     MINIO_CREDS=$(cat <<EOF
 {
   "minio_server": "${MINIO_SERVER}",
   "minio_user": "${MINIO_USER}",
   "minio_password": "${MINIO_PASSWORD}",
-  "minio_region": "${MINIO_REGION}"
+  "minio_region": "${MINIO_REGION}",
+  "minio_ssl": "${MINIO_SSL}",
+  "minio_insecure": "${MINIO_INSECURE}"
 }
 EOF
 )
